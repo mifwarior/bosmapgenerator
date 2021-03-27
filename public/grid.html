@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HexagonGreed</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      width: 100%;
+      height: 100vh;
+      position: relative;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .panel {
+      position: absolute;
+      right: 0;
+      top: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <canvas></canvas>
+    <div class="panel">
+      <input type="color" />
+    </div>
+  </div>
+  <script>
+
+
+class Hexagon {
+      constructor(ctx, radius) {
+        const R_r = 0.8660254037844386
+        this.ctx = ctx
+        this.radius = radius
+        this.r = radius * R_r
+      }
+
+      drawGreed(width, height) {
+
+        const { radius, r } = this
+
+        for (let y = radius + r * 0.5, i = 0; y < height; y += radius + r / 2, i++) {
+          for (let x = +r * 2; x < width; x += r * 2) {
+            this.draw(x + (i % 2 * r), y)
+          }
+        }
+
+      }
+
+      draw(x, y) {
+
+        const { ctx, radius, r } = this
+
+        ctx.moveTo(x, y + 1 * radius)
+        ctx.lineTo(x + 1 * r, y + 0.5 * r)
+        ctx.lineTo(x + 1 * r, y - 0.5 * r)
+        ctx.lineTo(x, y - 1 * radius)
+        ctx.lineTo(x - 1 * r, y - 0.5 * r)
+        ctx.lineTo(x - 1 * r, y + 0.5 * r)
+        ctx.lineTo(x, y + 1 * radius)
+      }
+
+      pointToHexagonCenter(mx, my) {
+
+        const { radius, r } = this
+
+        const dx = r * 2
+        const dy = radius + r / 2
+        const yCount = Math.round(my / dy)
+        const x = (Math.round(mx / dx)) * dx - (yCount % 2 == 0 ? r : 0)
+        const y = (yCount) * dy
+
+        return { x, y }
+      }
+    }
+
+    
+    const canvas = document.querySelector("canvas")
+    const { clientWidth, clientHeight } = canvas
+    canvas.width = clientWidth
+    canvas.height = clientHeight
+
+    const ctx = canvas.getContext("2d")
+    const transform = ctx.getTransform()
+    //ctx.lineWidth = 1
+    ctx.transform(1, 0, 0, 1, 0, 0)
+    function drawHexagon(x, y, radius = 1) {
+      const r = radius * 0.8660254037844386
+      ctx.moveTo(x, y + 1 * radius)
+      ctx.lineTo(x + 1 * r, y + 0.5 * r)
+      ctx.lineTo(x + 1 * r, y - 0.5 * r)
+      ctx.lineTo(x, y - 1 * radius)
+      ctx.lineTo(x - 1 * r, y - 0.5 * r)
+      ctx.lineTo(x - 1 * r, y + 0.5 * r)
+      ctx.lineTo(x, y + 1 * radius)
+    }
+
+    const hexagon = new Hexagon(ctx, 20)
+
+    ctx.beginPath()
+    hexagon.drawGreed(clientWidth, clientHeight)
+    ctx.fillStyle = "salmon"
+    ctx.strokeStyle = "salmon"
+    ctx.closePath()
+
+    ctx.stroke()
+
+    ctx.fillStyle = "rgba(100,200,50,0.1)"
+    const colorInput = document.querySelector("input[type=color]")
+    colorInput.onchange = ev => ctx.fillStyle = `${ev.target.value}0F`
+
+    canvas.onmousemove = ev => {
+      let { offsetX, offsetY } = ev
+      const { x, y } = hexagon.pointToHexagonCenter(offsetX, offsetY)
+      ctx.beginPath()
+      hexagon.draw(x, y)
+      ctx.closePath()
+      ctx.fill()
+
+      // const dx = r * 2
+      // const dy = radius + r / 2
+
+
+      // // const x = offsetX + (offsetX % (radius * 2))
+      // // const y = offsetY + (offsetY % (radius * 2))
+      // const yCount = Math.round(offsetY / dy)
+      // const x = (Math.round(offsetX / dx)) * dx - (yCount % 2 == 0 ? r : 0)
+      // const y = (yCount) * dy
+      // ctx.beginPath()
+      // drawHexagon(x, y, radius)
+      // ctx.closePath()
+      // ctx.fill()
+
+
+    }
+
+
+  </script>
+</body>
+
+</html>

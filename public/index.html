@@ -148,6 +148,14 @@
         str.length >= 4 && (this.b = Number.parseInt(str.substr(4, 2)))
         str.length >= 6 && (this.a = Number.parseInt(str.substr(6, 2)))
       }
+      static random() {
+        const color = new FillColor()
+        color.r = 30 + Math.random() * 225 | 0
+        color.g = 30 + Math.random() * 225 | 0
+        color.b = 30 + Math.random() * 225 | 0
+        color.a = 160
+        return color
+      }
     }
 
     class PointsPath {
@@ -155,12 +163,13 @@
         this.points = []
         this.boundingBox = new BoundingBox()
         //this.color = ((Math.random() * 255) << 8 * 3) + ((Math.random() * 255) << 8 * 2) + ((Math.random() * 255) << 8 * 1) + 0x60
-        this.color = (0xff << 4 * 4) + (0xff << 4 * 2)  //+ 0x60
+        this.color = FillColor.random()//(0xff << 4 * 4) + (0xff << 4 * 2)  //+ 0x60
       }
 
       static load(data) {
         const pointPath = new PointsPath()
-        pointPath.color = data.color
+        // pointPath.color = data.color
+        pointPath.color = FillColor.random()//.toHex()
         pointPath.boundingBox = BoundingBox.load(data.boundingBox)
         pointPath.points = data.points.map(Vector2.load)
         return pointPath
@@ -199,8 +208,9 @@
       }
 
       render(ctx) {
+        ctx.fillStyle = this.color.toHex()//`#${this.color.to}60` //'#ff00ff60';
         ctx.beginPath();
-        ctx.fillStyle = `#${this.color.toString(16)}60` //'#ff00ff60';
+        
         ctx.moveTo(this.points[0].x, this.points[0].y);
         for (let i = 1; i < this.points.length; i++) {
           const p = this.points[i]
@@ -213,7 +223,7 @@
         // this.boundingBox.redner(ctx)
 
         const center = this.getCenter()
-        ctx.fillStyle = '#ff30ffff';
+        ctx.fillStyle = '#000000ff';
         ctx.font = 'bold 24px serif';
         const name = "Vikings"
         const textOffset = ctx.measureText(name);
@@ -311,7 +321,7 @@
       }
     }
 
-    var bosMap = new BosMap("./map.jpg")
+    var bosMap = new BosMap("./map.png")
 
     document.querySelector("#save").onclick = ev => {
       const text = bosMap.toJSON()
