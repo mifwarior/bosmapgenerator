@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bos map generator</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    .fullSize {
+      width: 100%;
+      height: 100vh;
+      overflow: scroll;
+      position: relative;
+    }
+
+    canvas {
+      background-color: antiquewhite;
+    }
+
+    .menu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 200px;
+      height: 400px;
+      background-color: white;
+      border: 1px solid grey;
+      display: flex;
+      align-self: center;
+      flex-direction: column;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="fullSize">
+    <canvas></canvas>
+  </div>
+  <div class="menu">
+    <button id="save">Save DATA</button>
+    <button id="load">Load DATA</button>
+  </div>
+  <script>
+
+    class Vector2 {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+      }
+
+      distanceTo(v) {
+        return Math.sqrt(this.distanceToSquared(v));
+      }
+
+      distanceToSquared(v) {
+        const dx = this.x - v.x, dy = this.y - v.y;
+        return dx * dx + dy * dy;
+      }
+
+      clone() {
+        return new this.constructor(this.x, this.y);
+      }
+
+      sub(v) {
+        return new Vector2(this.x - v.x, this.y - v.y)
+      }
+
+      add(v) {
+        return new Vector2(this.x + v.x, this.y + v.y)
+      }
+
+      dot(v) {
+        return this.x * v.x + this.y * v.y
+      }
+
+      copyFrom(v) {
+        this.x = v.x
+        this.y = v.y
+      }
+
+      static load(data) {
+        return new Vector2(data.x, data.y)
+      }
+    }
+
+    class BoundingBox {
+      constructor() {
+        this.min = null;
+        this.max = null;
+      }
+
+      static load(data) {
+        const box = new BoundingBox()
+        data.min && (box.min = Vector2.load(data.min))
+        data.min && (box.max = Vector2.load(data.max))
+        return box
+      }
+      expand(p) {
+        !this.min && (this.min = p.clone())
+        !this.max && (this.max = p.clone())
+
+        this.min.x > p.x && (this.min.x = p.x)
+        this.max.x < p.x && (this.max.x = p.x)
+        this.min.y > p.y && (this.min.y = p.y)
+        this.max.y < p.y && (this.max.y = p.y)
+      }
+
+      contains(v) {
+        return this.min && this.max && this.min.x < v.x && this.max.x > v.x &&
+          this.min.y < v.y && this.max.y > v.y
+      }
+
+      redner(ctx) {
+        if (this.min && this.max) {
+          ctx.strokeRect(this.min.x, this.min.y, this.max.x - this.min.x, this.max.y - this.min.y);
+        }
+      }
+
+      getCenter() {
+        return new Vector2(
+          this.min.x + (this.max.x - this.min.x) / 2,
+          this.min.y + (this.max.y - this.min.y) / 2,
+        )
+      }
+
+    }
+
+    class FillColor {
+      constructor() {
+        this.r = 0;
+        this.g = 0;
+        this.b = 0;
+        this.a = 1
+      }
+
+      toHex() {
+        return `#${this.r.toString(16)}${this.g.toString(16)}${this.b.toString(16)}${this.a.toString(16)}`
+      }
+      fromHex(str) {
+        str = str.replace("#", "")
+        str.length > 0 && (this.r = Number.parseInt(str.substr(0, 2)))
+        str.length >= 2 && (this.g = Number.parseInt(str.substr(2, 2)))
+        str.length >= 4 && (this.b = Number.parseInt(str.substr(4, 2)))
+        str.length >= 6 && (this.a = Number.parseInt(str.substr(6, 2)))
+      }
+      static random() {
+        const color = new FillColor()
+        color.r = 30 + Math.random() * 225 | 0
+        color.g = 30 + Math.random() * 225 | 0
+        color.b = 30 + Math.random() * 225 | 0
+        color.a = 160
+        return color
+      }
+    }
+
+    class PointsPath {
+      constructor() {
+        this.points = []
+        this.boundingBox = new BoundingBox()
+        //this.color = ((Math.random() * 255) << 8 * 3) + ((Math.random() * 255) << 8 * 2) + ((Math.random() * 255) << 8 * 1) + 0x60
+        this.color = FillColor.random()//(0xff << 4 * 4) + (0xff << 4 * 2)  //+ 0x60
+      }
+
+      static load(data) {
+        const pointPath = new PointsPath()
+        // pointPath.color = data.color
+        pointPath.color = FillColor.random()//.toHex()
+        pointPath.boundingBox = BoundingBox.load(data.boundingBox)
+        pointPath.points = data.points.map(Vector2.load)
+        return pointPath
+      }
+
+      add(p) {
+        this.points.push(p)
+        this.boundingBox.expand(p)
+      }
+
+      contains(p) {
+        return this.boundingBox.contains(p)
+      }
+
+      closestPoint(p) {
+        let closest = null;
+        let closestDistance = null;
+
+        this.points.forEach(point => {
+          const distance = point.distanceTo(p)
+          if (closestDistance === null) closestDistance = distance
+          if (closest === null) closest = point
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closest = point
+          }
+        })
+
+        if (closest === null) closest = p
+
+        return closest
+      }
+
+      getCenter() {
+        return this.boundingBox.getCenter()
+      }
+
+      render(ctx) {
+        ctx.fillStyle = this.color.toHex()//`#${this.color.to}60` //'#ff00ff60';
+        ctx.beginPath();
+        
+        ctx.moveTo(this.points[0].x, this.points[0].y);
+        for (let i = 1; i < this.points.length; i++) {
+          const p = this.points[i]
+          ctx.lineTo(p.x, p.y);
+        }
+        ctx.closePath()
+        ctx.fill();
+
+        // ctx.stroke()
+        // this.boundingBox.redner(ctx)
+
+        const center = this.getCenter()
+        ctx.fillStyle = '#000000ff';
+        ctx.font = 'bold 24px serif';
+        const name = "Vikings"
+        const textOffset = ctx.measureText(name);
+        ctx.fillText(name, center.x - textOffset.width / 2, center.y)
+      }
+    }
+
+    class BosMap {
+      constructor(imageUrl) {
+
+        this.canvas = document.querySelector("canvas")
+        this.ctx = this.canvas.getContext("2d")
+
+        this.canvas.onmousemove = this.mouseMove
+        this.canvas.onmousedown = this.mouseDown
+
+        document.onkeydown = this.keyDown
+
+        this.load({ url: imageUrl, paths: [] })
+      }
+
+      correctPoint(p) {
+        const points = [];
+        for (let i = 0; i < this.paths.length - 1; i++) {
+          if (this.paths[i].contains(p)) {
+            const closest = this.paths[i].closestPoint(p)
+            const center = this.paths[i].getCenter()
+            if (closest.distanceTo(center) > p.distanceTo(center)) {
+              points.push(closest)
+            }
+          }
+        }
+        points
+          .map(point => ({ point, dist: p.distanceTo(point) }))
+          .sort((v1, v2) => v2.dist - v1.dist)
+
+        return points[0] || p
+      }
+
+      toJSON() {
+        return JSON.stringify({ paths: this.paths, url: this.url })
+      }
+
+      load(data) {
+        this.url = data.url
+        this.image = new Image(100, 100)
+        this.imageLoaded = false;
+        this.image.onload = () => {
+          this.imageLoaded = true;
+          this.render()
+        };
+
+        this.image.src = this.url
+        this.paths = data.paths.map(path => PointsPath.load(path))
+        this.currentPath = new PointsPath()
+
+      }
+
+      render() {
+        this.canvas.width = this.image.naturalWidth;
+        this.canvas.height = this.image.naturalHeight;
+
+        this.ctx.drawImage(this.image, 0, 0);
+        this.ctx.drawImage(this.image, 0, 0, this.image.width, this.image.height);
+
+        this.paths.forEach(path => path.render(this.ctx))
+      }
+
+      mouseDown = ev => {
+        this.currentPath = new PointsPath()
+        this.paths.push(this.currentPath)
+      }
+
+      lastPoint = null
+
+      mouseMove = ev => {
+        if (ev.buttons === 1) {
+          const mousePoint = new Vector2(ev.layerX, ev.layerY)
+          if (!this.lastPoint || mousePoint.distanceTo(this.lastPoint) > 5) {
+            const p = this.correctPoint(mousePoint)
+            this.currentPath.add(p)
+            this.render()
+            this.lastPoint = mousePoint
+          }
+          
+        }
+      }
+
+      keyDown = ev => {
+
+        if (ev.key === "Escape") {
+          this.paths.pop()
+          this.render()
+        }
+      }
+    }
+
+    var bosMap = new BosMap("./map.png")
+
+    document.querySelector("#save").onclick = ev => {
+      const text = bosMap.toJSON()
+      saveTextAsFile(text, "data.json")
+    }
+    document.querySelector("#load").onclick = ev => {
+      fetch("./data.json")
+        .then(responce => responce.json())
+        .then(data => {
+          bosMap.load(data)
+          bosMap.render()
+        })
+    }
+
+    function saveTextAsFile(textToWrite, fileNameToSaveAs) {
+      var textFileAsBlob = new Blob([textToWrite], { type: 'text/plain' });
+      var downloadLink = document.createElement("a");
+      downloadLink.download = fileNameToSaveAs;
+      downloadLink.innerHTML = "Download File";
+      if (window.webkitURL != null) {
+        // Chrome allows the link to be clicked
+        // without actually adding it to the DOM.
+        downloadLink.href = window.webkitURL.createObjectURL(textFileAsBlob);
+      }
+      else {
+        // Firefox requires the link to be added to the DOM
+        // before it can be clicked.
+        downloadLink.href = window.URL.createObjectURL(textFileAsBlob);
+        downloadLink.onclick = destroyClickedElement;
+        downloadLink.style.display = "none";
+        document.body.appendChild(downloadLink);
+      }
+
+      downloadLink.click();
+      downloadLink.remove()
+    }
+
+
+
+  </script>
+</body>
+
+</html>
