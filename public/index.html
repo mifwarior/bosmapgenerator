@@ -10,6 +10,8 @@
     body {
       margin: 0;
       padding: 0;
+      font-size: 16px;
+      line-height: 1.5em;
     }
 
     .container {
@@ -38,6 +40,11 @@
 
     .clan-picker {
       background-color: aliceblue;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5em;
+      padding: 0.2em;
+
     }
 
     .city {
@@ -50,6 +57,25 @@
       max-height: 40vh;
       overflow: auto;
     }
+
+    .clan-creator {
+      display: flex;
+      flex-direction: row;
+    }
+
+    .row {
+      display: flex;
+      flex-direction: row;
+    }
+
+    .selected {
+      border: 2px solid blue;
+      box-sizing: border-box;
+    }
+    #link {
+      background-color: aliceblue;
+      text-decoration: none;
+    }
   </style>
 </head>
 
@@ -57,9 +83,8 @@
   <div class="container">
     <canvas></canvas>
     <div class="panel">
-      <input type="color" />
-      <select></select>
       <button id="getImage">Download Image</button>
+      <a href="#" id="link">Copy Link</a>
     </div>
   </div>
   <script>
@@ -335,6 +360,7 @@
       constructor(map) {
         this.map = map
         this.root = document.querySelector(".panel").appendChild(this.el("div"))
+
         this.render()
       }
       el(type) {
@@ -343,15 +369,37 @@
 
       render() {
         this.root.innerHTML = ""
-        this.root.className = "clan-picker"
+        //this.root.appendChild(this.renderCities(this.map.cities))
+        this.root.appendChild(this.renderClans(this.map.clans))
 
-        this.name = this.root.appendChild(this.el("input"))
-        this.name.placeholder = "ClanName"
-        this.name.type = "text"
-        this.root.appendChild(this.renderCities(this.map.cities))
       }
 
-      renderCities(cities) {
+      generateId() {
+        let id = 0
+        while (this.map.clans.length && this.map.clans.find(clan => clan.id == id)) {
+          id++
+        }
+        return id
+      }
+
+      clanCreator(onCreate) {
+        const root = this.el("div")
+        root.className = "clan-creator"
+        const name = root.appendChild(this.el("input"))
+        name.type = "text"
+        name.placeholder = "Clan name"
+        const color = root.appendChild(this.el("input"))
+        color.type = "color"
+        const button = root.appendChild(this.el("button"))
+        button.innerText = "Add"
+        button.onclick = ev => {
+
+          onCreate && (onCreate({ id: this.generateId(), name: name.value, color: color.value, cities: [] }))
+        }
+        return root
+      }
+
+      renderCities(cities, selectedArray = []) {
         const root = this.el("div")
         const input = root.appendChild(this.el("input"))
         const list = root.appendChild(this.el("div"))
@@ -360,9 +408,12 @@
         const render = (cities) => {
           console.log(input.value)
           list.innerHTML = ""
+          cities = cities.sort((a, b) => a.name.localeCompare(b.name))
           cities.forEach(city => {
+            const selected = selectedArray.find(id => city.id == id)
+
             const cityEl = list.appendChild(this.el("div"))
-            cityEl.className = "city"
+            cityEl.className = `city${selected ? " selected" : ""}`
             const id = cityEl.appendChild(this.el("span"))
             id.innerText = city.id
             const name = cityEl.appendChild(this.el("span"))
@@ -378,6 +429,52 @@
         }
 
         render(cities)
+        return root
+      }
+      renderClans(clans) {
+        const root = this.el("div")
+        root.className = "clan-picker"
+        root.appendChild(this.clanCreator(clan => {
+          this.map.clans.push(clan)
+          this.render()
+        }))
+        clans.forEach(clan => {
+          root.appendChild(this.renderClan(clan))
+        })
+        return root
+      }
+
+      renderClan(clan) {
+        const root = this.el("div")
+
+        root.className = `row`//${this.map.selectedClan && this.map.selectedClan.id == clan.id ? " selected" : ""}`
+        // root.ondblclick = ev => {
+        //   this.map.selectedClan = clan
+        //   this.render()
+        // }
+        const checkbox = root.appendChild(this.el("input"))
+        checkbox.type = "checkbox"
+
+        checkbox.checked = this.map.selectedClan && this.map.selectedClan.name == clan.name
+        checkbox.onchange = ev => {
+          this.map.selectedClan = clan
+          this.render()
+        }
+
+        const name = root.appendChild(this.el("input"))
+        name.type = "text"
+        name.value = clan.name
+        const color = root.appendChild(this.el("input"))
+        color.type = "color"
+        color.value = clan.color
+        const button = root.appendChild(this.el("button"))
+        button.innerText = "delete"
+        button.onclick = ev => {
+          this.map.clans = this.map.clans.filter(c => c.id != clan.id)
+          this.render()
+        }
+        name.onchange = ev => clan.name = ev.target.value
+        color.onchange = ev => clan.color = ev.target.value
         return root
       }
     }
@@ -410,10 +507,20 @@
             cities: [0, 1, 2]
           }
         ]
+        this.selectedClan = null
 
         this.getClansFromUrl()
       }
+      getLink() {
 
+        const clansQuery = this.clans.map(clan => {
+          const color = clan.color.replace("#","")
+          const cities = clan.cities.join(",")
+          return `${clan.name}=[color:${color},cities:${cities}]`
+        }).join(";")
+        return `${location.origin}/?${clansQuery}$`
+
+      }
       getClansFromUrl() {
 
         function parseArgs(str) {
@@ -574,6 +681,25 @@
         // this.currentPath = new PointsPath()
         // this.paths.push(this.currentPath)
       }
+
+      getCityByCoord(x, y) {
+        const mousePoint = new Vector2(x, y)
+        const p = this.hexagon.pointToHexagonCenter(mousePoint.x, mousePoint.y)
+        const gridPoint = new Vector2(p.x + this.gridOffset.x, p.y + this.gridOffset.y)
+        // const gridPoint = new Vector2(p.x , p.y )
+        const city = this.cities.find(city => {
+
+          const cityPoint = city.points.find(p => {
+            const distance = gridPoint.distanceTo(p)
+            return distance <= this.hexagon.radius * 1.5
+          })
+          return cityPoint
+
+          return null
+        })
+        return city
+      }
+
       mouseClick = ev => {
         if (this.editCities) {
           const mousePoint = new Vector2(ev.offsetX, ev.offsetY)
@@ -582,8 +708,21 @@
           this.cities[this.currentCity].points.push(gridPoint)
         }
 
+        if (!this.editCities && this.selectedClan) {
+          const city = this.getCityByCoord(ev.offsetX, ev.offsetY)
+          if (city) {
+            if (this.selectedClan.cities.find(id => id == city.id)) {
+              this.selectedClan.cities = this.selectedClan.cities.filter(id => id != city.id)
+            } else {
+              this.selectedClan.cities.push(city.id)
+            }
+            //this.getLink()
+          }
+        }
+
         this.render()
       }
+
 
       lastPoint = null
 
@@ -637,23 +776,21 @@
         map.render()
       })
       .then(() => {
-        const select = document.querySelector("select")
-        map.cities.forEach((city, index) => {
-          const option = document.createElement("option")
-          option.value = index
-          option.innerText = city.name
-          select.appendChild(option)
-        })
-        select.onchange = ev => {
-          map.currentCity = Number(ev.target.value)
-        }
-      })
-      .then(() => {
         const clanPicker = new ClanPicker(map)
       })
 
     document.querySelector("#getImage").onclick = ev => {
       map.downloadImage()
+    }
+
+    document.querySelector("#link").onclick = ev => {
+      ev.preventDefault()
+      /* Copy the text inside the text field */
+      navigator.clipboard.writeText(map.getLink()).then(function () {
+        alert('Link copied to clipboard!');
+      }, function (err) {
+        console.error('Could not copy text: ', err);
+      });
     }
 
 
