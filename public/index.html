@@ -607,11 +607,11 @@
         clans.forEach((clan, index) => {
           const p = new Vector2(50,180)
           let textInfo = this.ctx.measureText(clan.name);
-          this.ctx.strokeStyle = clan.color
+          this.ctx.fillStyle = clan.color
           this.ctx.font = '50px serif';
-          this.ctx.fillStyle = Color.fromHex(clan.color).toTextColor().toHex()
+          //this.ctx.strokeStyle = Color.fromHex(clan.color).toTextColor().toHex()
           this.ctx.fillText(clan.name, p.x, p.y  + 60 * index)
-          this.ctx.strokeText(clan.name, p.x, p.y  + 60 * index)
+          //this.ctx.strokeText(clan.name, p.x, p.y  + 60 * index)
         })
       }
 
