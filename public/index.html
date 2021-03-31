@@ -571,7 +571,7 @@
           const cities = clan.cities.join(",")
           return `${clan.name}=[color:${color},cities:${cities}]`
         }).join(";")
-        return `${location.origin}/?${clansQuery}$`
+        return escape(`${location.origin}/?${clansQuery}$`)
 
       }
       getClansFromUrl() {
