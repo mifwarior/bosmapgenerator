@@ -72,6 +72,7 @@
       border: 2px solid blue;
       box-sizing: border-box;
     }
+
     #link {
       background-color: aliceblue;
       text-decoration: none;
@@ -524,7 +525,7 @@
       getLink() {
 
         const clansQuery = this.clans.map(clan => {
-          const color = clan.color.replace("#","")
+          const color = clan.color.replace("#", "")
           const cities = clan.cities.join(",")
           return `${clan.name}=[color:${color},cities:${cities}]`
         }).join(";")
@@ -552,7 +553,7 @@
           }
           return result
         }
-        const clans = parseArgs(document.location.search).map((clan,id) => ({
+        const clans = parseArgs(document.location.search).map((clan, id) => ({
           ...clan,
           id
         }))
@@ -580,8 +581,9 @@
       }
 
       drawClan(clan) {
-        const bounding = new BoundingBox()
-        clan.cities.forEach(id => {
+
+        clan.cities.forEach((id, index) => {
+          const bounding = new BoundingBox()
           const city = this.cities.find(city => city.id == id)
           if (city) {
             const color = Color.fromHex(clan.color)
@@ -591,11 +593,15 @@
             bounding.expand(center)
           }
         })
-        if (bounding.min && bounding.max) {
-          const color = Color.fromHex(clan.color)
-          color.a = 255
-
-          this.drawText(bounding.getCenter(), clan.name, color.toTextColor().toHex())
+        if (clan.cities.length) {
+          const id = clan.cities[0]
+          const city = this.cities.find(city => city.id == id)
+          if (city && city.points.length) {
+            const color = Color.fromHex(clan.color)
+            color.a = 255
+            const center = this.getCityCenter(city)
+            this.drawText(center, clan.name, color.toTextColor().toHex())
+          }
         }
       }
 
