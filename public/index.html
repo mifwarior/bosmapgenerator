@@ -371,15 +371,11 @@
         this.root.innerHTML = ""
         //this.root.appendChild(this.renderCities(this.map.cities))
         this.root.appendChild(this.renderClans(this.map.clans))
-
+        this.map.render()
       }
 
       generateId() {
-        let id = 0
-        while (this.map.clans.length && this.map.clans.find(clan => clan.id == id)) {
-          id++
-        }
-        return id
+        return this.map.generateClanId()
       }
 
       clanCreator(onCreate) {
@@ -473,8 +469,14 @@
           this.map.clans = this.map.clans.filter(c => c.id != clan.id)
           this.render()
         }
-        name.onchange = ev => clan.name = ev.target.value
-        color.onchange = ev => clan.color = ev.target.value
+        name.onchange = ev => {
+          clan.name = ev.target.value
+          this.map.render()
+        }
+        color.onchange = ev => {
+          clan.color = ev.target.value
+          this.map.render()
+        }
         return root
       }
     }
@@ -511,6 +513,14 @@
 
         this.getClansFromUrl()
       }
+
+      generateClanId() {
+        let id = 0
+        while (this.clans.length && this.clans.find(clan => clan.id == id)) {
+          id++
+        }
+        return id
+      }
       getLink() {
 
         const clansQuery = this.clans.map(clan => {
@@ -542,7 +552,10 @@
           }
           return result
         }
-        const clans = parseArgs(document.location.search)
+        const clans = parseArgs(document.location.search).map((clan,id) => ({
+          ...clan,
+          id
+        }))
         this.clans = clans
       }
 
