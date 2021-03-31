@@ -29,13 +29,11 @@
       position: fixed;
       right: 0;
       top: 0;
-    }
-
-    .panel {
       display: flex;
       flex-direction: column;
       padding: 1em;
       gap: 1em;
+      z-index: 100;
     }
 
     .clan-picker {
@@ -77,6 +75,44 @@
     #link {
       background-color: aliceblue;
       text-decoration: none;
+    }
+
+    .image-info {
+      position: absolute;
+      width: 630px;
+      height: 110px;
+      left: 550px;
+      top: 60px;
+      background-color: #254254;
+    }
+
+    .image-info form {
+      width: 100%;
+      height: 100%;
+    }
+
+    .image-info input {
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+      font-family: sans-serif;
+      border: none;
+      appearance: none;
+      outline: none;
+    }
+
+    .image-info .title {
+      font-size: 36px;
+      color: #deae1d;
+      margin-top: 16px;
+      background-color: rgba(255, 255, 255, 0.0);
+    }
+
+    .image-info .description {
+      font-size: 30px;
+      color: #1fb01b;
+      margin-top: 2px;
+      background-color: rgba(255, 255, 255, 0.0);
     }
   </style>
 </head>
@@ -373,7 +409,7 @@
           list.innerHTML = ""
           cities = cities.sort((a, b) => a.name.localeCompare(b.name))
           cities.forEach(city => {
-            
+
             const selected = this.map.currentCity == city.id
             const cityEl = list.appendChild(this.el("div"))
 
@@ -539,6 +575,7 @@
         this.canvas.onclick = this.mouseClick
         document.onkeydown = this.keyDown
 
+        
 
         this.load({ url: imageUrl, paths: [] })
 
@@ -555,6 +592,9 @@
         this.selectedClan = null
 
         this.getClansFromUrl()
+
+        this.imageDescription = new ImageDescription(this.ctx)
+        
       }
 
       generateClanId() {
@@ -571,7 +611,7 @@
           const cities = clan.cities.join(",")
           return `${clan.name}=[color:${color},cities:${cities}]`
         }).join(";")
-        return`${location.origin}/?${ escape(clansQuery)}$`
+        return `${location.origin}/?${escape(clansQuery)}$`
 
       }
       getClansFromUrl() {
@@ -605,12 +645,12 @@
       drawClans(clans) {
         clans.forEach(clan => this.drawClan(clan))
         clans.forEach((clan, index) => {
-          const p = new Vector2(50,180)
+          const p = new Vector2(50, 180)
           let textInfo = this.ctx.measureText(clan.name);
           this.ctx.fillStyle = clan.color
           this.ctx.font = '50px serif';
           //this.ctx.strokeStyle = Color.fromHex(clan.color).toTextColor().toHex()
-          this.ctx.fillText(clan.name, p.x, p.y  + 60 * index)
+          this.ctx.fillText(clan.name, p.x, p.y + 60 * index)
           //this.ctx.strokeText(clan.name, p.x, p.y  + 60 * index)
         })
       }
@@ -738,6 +778,7 @@
         if (this.editCities) {
           this.renderCities()
         }
+        this.imageDescription.render()
       }
       // pointToIndex(p) {
       //   return 0
@@ -776,13 +817,13 @@
           const p = this.hexagon.pointToHexagonCenter(mousePoint.x, mousePoint.y)
           const gridPoint = { x: p.x + this.gridOffset.x, y: p.y + this.gridOffset.y }
           const city = this.cities.find(city => city.id == this.currentCity)
-          if(ev.buttons == 1) {
+          if (ev.buttons == 1) {
             city.points.push(gridPoint)
           }
-          if(ev.buttons == 2) {
-            city.points = city.points.filter(p => new Vector2(p.x,p.y).distanceTo(gridPoint) >= this.hexagon.radius)
+          if (ev.buttons == 2) {
+            city.points = city.points.filter(p => new Vector2(p.x, p.y).distanceTo(gridPoint) >= this.hexagon.radius)
           }
-          
+
         }
 
         if (!this.editCities && this.selectedClan) {
@@ -834,16 +875,96 @@
       downloadImage() {
         this.canvas.toBlob(blob => {
           const a = document.createElement("a")
+          document.body.appendChild(a)
           const date = Intl.DateTimeFormat().format(new Date())
           a.download = `map_${date}.jpg`
           a.style.display = "none"
           a.href = URL.createObjectURL(blob)
-          document.body.appendChild(a)
+      
           a.click()
           a.remove()
         }, "image/jpeg", 0.7)
       }
     }
+
+    class ImageDescription {
+      constructor(ctx) {
+        this.ctx = ctx
+        this.title = "Results of Territorial Wars"
+        this.description = "Итоги Территориальных войн"
+        this.contributors = [
+          "Map redactor - Dante DmC [Vikings]",
+          "Program developer - 0x64 [Vikings]"
+        ]
+        this.createHtmlEditor()
+        this.root = null
+      }
+
+      createHtmlEditor() {
+        const root = document.body.appendChild(document.createElement("div"))
+        this.root = root
+        root.className = "image-info"
+        const form = root.appendChild(document.createElement("form"))
+        form.onsubmit = ev => ev.preventDefault()
+        const title = form.appendChild(document.createElement("input"))
+        title.className = "title"
+        const description = form.appendChild(document.createElement("input"))
+        description.className = "description"
+        title.value = this.title
+        description.value = this.description
+        title.onkeyup = ev => {
+          this.title = ev.target.value
+          this.render()
+        }
+        description.onkeyup = ev => {
+          this.description = ev.target.value
+          this.render()
+        }
+      }
+
+      dispose(){
+        this.root && this.root.remove()
+      }
+
+
+      render() {
+        const p = new Vector2(550, 60)
+        const size = new Vector2(630, 110)
+        this.ctx.fillStyle = "#254254ff"
+        this.ctx.beginPath()
+        this.ctx.moveTo(p.x, p.y)
+        this.ctx.rect(p.x, p.y, size.x, size.y);
+        this.ctx.closePath()
+        this.ctx.fill();
+
+
+        if (this.title) {
+          this.ctx.fillStyle = "#deae1d"
+          this.ctx.font = '36px sans-serif';
+          const titleInfo = this.ctx.measureText(this.title);
+          this.ctx.fillText(this.title, p.x + size.x / 2 - titleInfo.width / 2, p.y + 50)
+        }
+
+        if (this.description) {
+          this.ctx.fillStyle = "#1fb01b"
+          this.ctx.font = '30px sans-serif';
+          const descriptionInfo = this.ctx.measureText(this.description);
+          this.ctx.fillText(this.description, p.x + size.x / 2 - descriptionInfo.width / 2, p.y + 45 * 2)
+        }
+
+        if (this.contributors.length) {
+
+          this.ctx.fillStyle = "#64ff1e"
+          this.ctx.font = '16px sans-serif';
+          this.contributors.reverse().forEach((text, index) => {
+            this.ctx.fillText(text, 10, this.ctx.canvas.height - 10 - 30 * index)
+          })
+        }
+
+      }
+
+    }
+
     const map = new BosMap("./map.png")
     map.render()
 
@@ -862,8 +983,13 @@
           document.con
         }
       })
+      .then(() => {
+
+      })
 
     document.querySelector("#getImage").onclick = ev => {
+      ev.preventDefault()
+      ev.stopPropagation()
       map.downloadImage()
     }
 
