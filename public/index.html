@@ -532,6 +532,7 @@
         this.showGrid = false
         this.editCities = false
         this.gridOffset = new Vector2(-5, 0)
+        this.showClanNameInGreed = false
 
         this.canvas.onmousemove = this.mouseMove
         this.canvas.onmousedown = this.mouseDown
@@ -576,8 +577,8 @@
       getClansFromUrl() {
 
         function parseArgs(str) {
-          console.log(str)
-          const regex = /(\b\w+)\=\[color:(\w+),cities:([\d,]+)\]/gm;
+          str = unescape(str)
+          const regex = /(\b[\w\s]+)\=\[color:(\w+),cities:([\d,]+)?\]/gm;
           const result = []
           let m;
 
@@ -589,7 +590,7 @@
             result.push({
               name: m[1],
               color: `#${m[2]}`,
-              cities: m[3].split(",").map(v => Number(v))
+              cities: m[3] && m[3].split(",").map(v => Number(v)) || []
             })
           }
           return result
@@ -603,9 +604,16 @@
 
       drawClans(clans) {
         clans.forEach(clan => this.drawClan(clan))
+        clans.forEach((clan, index) => {
+          const p = new Vector2(50,180)
+          let textInfo = this.ctx.measureText(clan.name);
+          this.ctx.fillStyle = clan.color
+          this.ctx.font = '50px serif';
+          this.ctx.fillText(clan.name, p.x, p.y  + 60 * index)
+        })
       }
 
-      drawText(p, text, color) {
+      drawTextCenter(p, text, color) {
         color && (this.ctx.fillStyle = color)
         this.ctx.font = '50px serif';
         let textInfo = this.ctx.measureText(text);
@@ -634,14 +642,14 @@
             bounding.expand(center)
           }
         })
-        if (clan.cities.length) {
+        if (this.showClanNameInGreed && clan.cities.length) {
           const id = clan.cities[0]
           const city = this.cities.find(city => city.id == id)
           if (city && city.points.length) {
             const color = Color.fromHex(clan.color)
             color.a = 255
             const center = this.getCityCenter(city)
-            this.drawText(center, clan.name, color.toTextColor().toHex())
+            this.drawTextCenter(center, clan.name, color.toTextColor().toHex())
           }
         }
       }
