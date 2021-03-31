@@ -56,6 +56,7 @@
     .city-list {
       max-height: 40vh;
       overflow: auto;
+      background-color: aliceblue;
     }
 
     .clan-creator {
@@ -80,7 +81,7 @@
   </style>
 </head>
 
-<body>
+<body oncontextmenu="return false;">
   <div class="container">
     <canvas></canvas>
     <div class="panel">
@@ -357,6 +358,45 @@
       { name: "Queen's Fort", points: [] },
     ]
 
+    class CityListUI {
+      constructor(map) {
+        this.map = map
+
+        const cities = this.map.cities
+        const root = document.querySelector(".panel").appendChild(this.el("div"))
+        const input = root.appendChild(this.el("input"))
+        const list = root.appendChild(this.el("div"))
+        list.className = "city-list"
+
+        const render = (cities) => {
+          console.log(input.value)
+          list.innerHTML = ""
+          cities = cities.sort((a, b) => a.name.localeCompare(b.name))
+          cities.forEach(city => {
+            
+            const selected = this.map.currentCity == city.id
+            const cityEl = list.appendChild(this.el("div"))
+
+            cityEl.onclick = ev => {
+              this.map.currentCity = city.id
+              render(this.map.cities)
+            }
+
+            cityEl.className = `city${selected ? " selected" : ""}`
+            const id = cityEl.appendChild(this.el("span"))
+            id.innerText = city.id
+            const name = cityEl.appendChild(this.el("span"))
+            name.innerText = city.name
+          })
+        }
+        render(this.map.cities)
+      }
+
+      el(type) {
+        return document.createElement(type)
+      }
+    }
+
     class ClanPicker {
       constructor(map) {
         this.map = map
@@ -497,6 +537,7 @@
         this.canvas.onmousedown = this.mouseDown
         this.canvas.onclick = this.mouseClick
         document.onkeydown = this.keyDown
+
 
         this.load({ url: imageUrl, paths: [] })
 
@@ -696,10 +737,10 @@
       //   return new Vector2(0, 0)
       // }
 
-      mouseDown = ev => {
-        // this.currentPath = new PointsPath()
-        // this.paths.push(this.currentPath)
-      }
+      // mouseDown = ev => {
+      //   // this.currentPath = new PointsPath()
+      //   // this.paths.push(this.currentPath)
+      // }
 
       getCityByCoord(x, y) {
         const mousePoint = new Vector2(x, y)
@@ -719,18 +760,25 @@
         return city
       }
 
-      mouseClick = ev => {
+      mouseDown = ev => {
         if (this.editCities) {
           const mousePoint = new Vector2(ev.offsetX, ev.offsetY)
           const p = this.hexagon.pointToHexagonCenter(mousePoint.x, mousePoint.y)
           const gridPoint = { x: p.x + this.gridOffset.x, y: p.y + this.gridOffset.y }
-          this.cities[this.currentCity].points.push(gridPoint)
+          const city = this.cities.find(city => city.id == this.currentCity)
+          if(ev.buttons == 1) {
+            city.points.push(gridPoint)
+          }
+          if(ev.buttons == 2) {
+            city.points = city.points.filter(p => new Vector2(p.x,p.y).distanceTo(gridPoint) >= this.hexagon.radius)
+          }
+          
         }
 
         if (!this.editCities && this.selectedClan) {
           const city = this.getCityByCoord(ev.offsetX, ev.offsetY)
           if (city) {
-            if (this.selectedClan.cities.find(id => id == city.id)) {
+            if (this.selectedClan.cities.find(id => id == city.id) !== undefined) {
               this.selectedClan.cities = this.selectedClan.cities.filter(id => id != city.id)
             } else {
               this.selectedClan.cities.push(city.id)
@@ -766,7 +814,8 @@
 
         if (ev.key === "Escape") {
           if (this.editCities) {
-            this.cities[this.currentCity].points.pop()
+            const city = this.cities.find(city => city.id == this.currentCity)
+            city.points.pop()
             this.render()
           }
         }
@@ -796,6 +845,12 @@
       })
       .then(() => {
         const clanPicker = new ClanPicker(map)
+      })
+      .then(() => {
+        if (map.editCities) {
+          const citySelector = new CityListUI(map)
+          document.con
+        }
       })
 
     document.querySelector("#getImage").onclick = ev => {
