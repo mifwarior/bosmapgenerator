@@ -27,13 +27,44 @@
 
     .panel {
       position: fixed;
-      right: 0;
-      top: 0;
+      right: 1em;
+      top: 1em;
       display: flex;
       flex-direction: column;
       padding: 1em;
       gap: 1em;
       z-index: 100;
+      background-color: aliceblue;
+      box-sizing: border-box;
+      border: 3px solid #4f89de;
+      border-radius: 0.5em;
+      box-shadow: 8px 7px 9px -1px rgb(0 0 0 / 50%);
+      /* opacity: 0.9; */
+    }
+
+    .panel button {
+      line-height: 1.5em;
+      font-family: monospace;
+      border: 2px solid #4f89de;
+      border-radius: 0.5em;
+      color: #4f89de;
+      cursor: pointer;
+      background-color: white;
+    }
+
+    .panel button:hover {
+      box-shadow: 0px 0px 5px 0px rgba(79, 137, 222, 0.51);
+    }
+
+    .panel button:focus {
+      outline: none;
+    }
+
+    .panel input {
+      outline: none;
+      border: 1px solid #4f89de;
+      border-radius: 0.2em;
+      font-size: inherit;
     }
 
     .clan-picker {
@@ -60,11 +91,16 @@
     .clan-creator {
       display: flex;
       flex-direction: row;
+      justify-content: flex-end;
+      gap: 0.2em;
+      align-items: stretch;
     }
 
     .row {
       display: flex;
       flex-direction: row;
+      gap: 0.2em;
+      align-items: stretch;
     }
 
     .selected {
@@ -75,6 +111,12 @@
     #link {
       background-color: aliceblue;
       text-decoration: none;
+      font-family: monospace;
+      text-align: center;
+    }
+
+    #link:hover {
+      text-decoration: underline;
     }
 
     .image-info {
@@ -575,7 +617,7 @@
         this.canvas.onclick = this.mouseClick
         document.onkeydown = this.keyDown
 
-        
+
 
         this.load({ url: imageUrl, paths: [] })
 
@@ -594,7 +636,7 @@
         this.getClansFromUrl()
 
         this.imageDescription = new ImageDescription(this.ctx)
-        
+
       }
 
       generateClanId() {
@@ -880,7 +922,7 @@
           a.download = `map_${date}.jpg`
           a.style.display = "none"
           a.href = URL.createObjectURL(blob)
-      
+
           a.click()
           a.remove()
         }, "image/jpeg", 0.7)
@@ -891,7 +933,7 @@
       constructor(ctx) {
         this.ctx = ctx
         this.title = "Results of Territorial Wars"
-        this.description = "Итоги Территориальных войн"
+        this.description = "Итоги Территориальных Войн"
         this.contributors = [
           "Map redactor - Dante DmC [Vikings]",
           "Program developer - 0x64 [Vikings]"
@@ -922,7 +964,7 @@
         }
       }
 
-      dispose(){
+      dispose() {
         this.root && this.root.remove()
       }
 
@@ -993,10 +1035,17 @@
       map.downloadImage()
     }
 
+    document.querySelector("#link").onmousedown = ev => {
+      ev.preventDefault()
+      const link = map.getLink()
+      ev.target.href = link
+    }
     document.querySelector("#link").onclick = ev => {
       ev.preventDefault()
+      const link = map.getLink()
+      ev.target.href = link
       /* Copy the text inside the text field */
-      navigator.clipboard.writeText(map.getLink()).then(function () {
+      navigator.clipboard.writeText(link).then(function () {
         alert('Link copied to clipboard!');
       }, function (err) {
         console.error('Could not copy text: ', err);
