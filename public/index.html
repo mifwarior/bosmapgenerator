@@ -956,7 +956,7 @@
 
           this.ctx.fillStyle = "#64ff1e"
           this.ctx.font = '16px sans-serif';
-          this.contributors.reverse().forEach((text, index) => {
+          this.contributors.forEach((text, index) => {
             this.ctx.fillText(text, 10, this.ctx.canvas.height - 10 - 30 * index)
           })
         }
